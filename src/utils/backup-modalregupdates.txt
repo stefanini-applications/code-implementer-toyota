@@ -1,0 +1,507 @@
+/* eslint-disable jsx-a11y/label-has-associated-control */
+import React, { useEffect, useState, useRef } from 'react';
+import { Calendar } from 'react-date-range';
+import { FaCheckCircle } from 'react-icons/fa';
+import { useDispatch, useSelector } from 'react-redux';
+
+import { Formik } from 'formik';
+import Moment from 'moment';
+import * as Yup from 'yup';
+
+import removeAttachment from '../../../assets/remove-attachment.svg';
+import { translate } from '../../../locales';
+import {
+  getUpdatesRelatedSubstanceRequest,
+  getRegulationsRequest,
+  selectors
+} from '../../../store/modules/dropdownValues/actions';
+import {
+  createRegulatoryUpdatesRecordRequest,
+  editRegulatoryUpdatesRecordRequest
+  // attachmentModalRegulatoryUpdatesRequest,
+  // attachmentModalRegulatoryUpdatesFailure
+} from '../../../store/modules/regulatoryUpdates/actions';
+import AlternativeButton from '../../AlternativeButton';
+import Button from '../../Button';
+import CkEditor from '../../CkEditor';
+import Error from '../../Error';
+import SubstanceSelector from '../../SubstanceSelector';
+import {
+  Container,
+  ContainerSuccess,
+  SuccessModal,
+  UpdateModal,
+  ContentToggle,
+  ContainerModalItems,
+  ContainerToggles,
+  ContainerSave,
+  ToggleItem,
+  TitleModal,
+  XIcon,
+  TitleToggle,
+  AddAttachment,
+  BtnAddAttachment,
+  ContainerDates,
+  DateColumnWrapper,
+  RowWrapper,
+  DateLabel,
+  AttachmentsInputContainer,
+  AttachmentsInput,
+  AttachmentsButton,
+  AttachmentsLabel,
+  AttachmentsWrapperContainer,
+  Touchable,
+  RemoveAttachment,
+  Overlay,
+  OverlayDateRange,
+  DatePickerContainer
+} from './styled';
+
+interface IModalUpdate {
+  open?: boolean;
+  close?: any;
+  date?: boolean;
+  description?: boolean;
+  substances?: boolean;
+  attachments?: boolean;
+  noStandartButtons?: any;
+  modalTitle: any;
+  editData?: any;
+  regulation: any;
+}
+interface MyFormValues {
+  agencyDate: string;
+  agencyDueDate: string;
+  regulationId: number;
+  comment: string;
+  substances: any[];
+}
+
+const ModalUpdate: React.FC<IModalUpdate> = ({
+  open,
+  close,
+  date,
+  description,
+  substances,
+  attachments,
+  modalTitle,
+  noStandartButtons,
+  editData,
+  regulation
+}) => {
+  const [test, setTest] = useState<any>(false);
+  const [attDescription, setAttDescription] = useState<any>([]);
+  const [newFiles, setNewFiles] = useState<any>([]);
+  const [countFiles, setcountFiles] = useState(1);
+  const [openDueDate, setOpenDueDate] = useState(false);
+  const [openAnnouncementDate, setOpenAnnouncementDate] = useState(false);
+  const [dueDate, setDueDate] = useState(undefined);
+  const [announcementDate, setAnnouncementDate] = useState(undefined);
+  const files = useRef<any>([]);
+  const chique: any = useRef([]);
+  const showFileUploadRef = useRef<any>([true]);
+  const listSubstances = useSelector(selectors.dropDownUpdatesRelatedSubstance);
+  const dispatch = useDispatch();
+  let substanceDefault: any[] = [];
+
+  const initialValues: MyFormValues = {
+    agencyDate: editData
+      ? Moment(editData.agencyDate).format('MM/DD/YYYY')
+      : '',
+    agencyDueDate: editData
+      ? Moment(editData.agencyDueDate).format('MM/DD/YYYY')
+      : '',
+    regulationId: editData ? editData.regulationId : 0,
+    comment: editData ? editData.comment : '',
+    substances: []
+  };
+
+  const formSchema = Yup.object().shape({
+    comment: Yup.string().required('Required')
+  });
+
+  if (editData) {
+    substanceDefault = [];
+    editData.Substances.forEach((substance: any) => {
+      substanceDefault.push(substance.id);
+    });
+    substanceDefault = substanceDefault.map(Number);
+  }
+
+  useEffect(() => {
+    dispatch(getRegulationsRequest());
+    dispatch(getUpdatesRelatedSubstanceRequest(regulation));
+  }, []);
+
+  useEffect(() => {
+    setTest(false);
+  }, [editData]);
+
+  useEffect(() => {
+    if (editData) {
+      setcountFiles(editData.Attachments.length);
+      showFileUploadRef.current = [];
+      if (editData.Attachments.length > 0) {
+        for (let index = 0; index < editData.Attachments.length; index++) {
+          files.current.push({
+            id: editData.Attachments[index].id,
+            name: editData.Attachments[index].fileName,
+            uploaded: true,
+            uuid: editData.Attachments[index].fileUuid
+          });
+          attDescription.push(editData.Attachments[index].description);
+          if (index > 0) {
+            showFileUploadRef.current.push(false);
+          } else {
+            showFileUploadRef.current[0] = false;
+          }
+        }
+        setNewFiles(files.current);
+        setTest(true);
+      } else {
+        setcountFiles(1);
+      }
+    }
+  }, [editData, test]);
+
+  function resetUpdate() {
+    setcountFiles(1);
+    showFileUploadRef.current.push([true]);
+    files.current = [];
+    setNewFiles(files.current);
+    setAttDescription([]);
+  }
+
+  const onFileChoosed = (e: any, i: any) => {
+    const extension = e?.target?.files[0]?.name?.split('.').pop();
+    const extAllowed: any = process.env.REACT_APP_ATT_EXT_ALLOWED;
+    if (!extAllowed.includes(extension.toUpperCase())) {
+      // dispatch(attachmentModalRegulatoryUpdatesFailure());
+    } else {
+      files.current = [...files.current, Array.from(e.target.files)];
+      showFileUploadRef.current[i] = false;
+      const [filesArray] = files.current;
+      setNewFiles(filesArray);
+    }
+  };
+
+  const onAddAttDescription = (e: any, i: any) => {
+    attDescription[i] = e.target.value;
+  };
+
+  const onFileRemove = (i: any) => {
+    if (i === 0 && countFiles == 1) {
+      showFileUploadRef.current[0] = true;
+      files.current = [];
+      setNewFiles(files.current);
+      setAttDescription([]);
+    } else {
+      showFileUploadRef.current.splice(i, 1);
+      files.current.splice(i, 1);
+      attDescription.splice(i, 1);
+      setNewFiles(files.current);
+      setcountFiles(countFiles - 1);
+    }
+  };
+
+  async function onSubmit(values: any, actions: any) {
+    const update = {
+      id: editData ? Number(editData.id) : null,
+      regulationId: Number(regulation),
+      comment: values.comment,
+      agencyDate: Moment.utc(Moment(announcementDate).utc()).format(),
+      agencyDueDate: Moment.utc(Moment(dueDate).utc()).format(),
+      toyotaDueDate: Moment.utc(Moment(dueDate).utc()).format(),
+      active: 1,
+      attachments: newFiles[0] ?? [],
+      // [
+      //   {
+      //     "fileUuid": "52f8fc53-0db0-4514-a8ff-240a354ef6fd",
+      //     "fileName": "comp CC!ssio Stanquini Almeida Mai (1).pdf"
+      // }
+      // ]
+      substances: values.substances
+    };
+    if (editData) {
+      dispatch(editRegulatoryUpdatesRecordRequest(update));
+    } else {
+      // dispatch();
+      // attachmentModalRegulatoryUpdatesRequest({ file: files?.current })
+      dispatch(createRegulatoryUpdatesRecordRequest(update));
+    }
+    resetUpdate();
+    close();
+  }
+
+  const handleAddMoreFiles = () => {
+    attDescription.push('');
+    showFileUploadRef.current.push(true);
+    setcountFiles(countFiles + 1);
+  };
+
+  return open ? (
+    <Formik
+      initialValues={initialValues}
+      onSubmit={(values, actions) => {
+        onSubmit(values, actions);
+      }}
+      validationSchema={formSchema}
+    >
+      {({ values, errors, touched, handleSubmit }) => (
+        <form
+          onSubmit={(e: any) => {
+            e.preventDefault();
+            handleSubmit();
+          }}
+        >
+          <Container id="update-modal">
+            <ContainerSuccess>
+              <SuccessModal>
+                <div className="div-container-success">
+                  <div className="div-icon-success">
+                    <FaCheckCircle />
+                  </div>
+                  <div className="div-container-text-success">
+                    <div className="div-text-title-success">
+                      <p>{translate('header.success')}</p>
+                    </div>
+                    <div className="div-text-desc-success">
+                      <p>{translate('header.updateSuccess')}</p>
+                    </div>
+                  </div>
+                </div>
+              </SuccessModal>
+            </ContainerSuccess>
+            <UpdateModal>
+              <ContainerModalItems>
+                <TitleModal>
+                  <p>{modalTitle}</p>
+                  <XIcon
+                    onClick={() => {
+                      resetUpdate();
+                      close();
+                    }}
+                  />
+                </TitleModal>
+                <ContainerToggles>
+                  {date && (
+                    <ToggleItem id="item-date">
+                      <TitleToggle>
+                        <p>{translate('header.dates')}</p>
+                      </TitleToggle>
+                      <ContentToggle>
+                        <ContainerDates>
+                          <RowWrapper>
+                            <DateColumnWrapper>
+                              <DateLabel>
+                                {translate('header.announcement')}
+                              </DateLabel>
+                              <input
+                                type="text"
+                                name="InputKeyword"
+                                value={
+                                  announcementDate !== undefined
+                                    ? `${Moment(announcementDate).format(
+                                        'MM-DD-YYYY'
+                                      )}`
+                                    : `-------`
+                                }
+                                readOnly
+                                onClick={() =>
+                                  setOpenAnnouncementDate(!openAnnouncementDate)
+                                }
+                              />
+                              {openAnnouncementDate && (
+                                <>
+                                  <OverlayDateRange
+                                    onClick={() =>
+                                      setOpenAnnouncementDate(
+                                        !openAnnouncementDate
+                                      )
+                                    }
+                                  />
+                                  <DatePickerContainer>
+                                    <Calendar
+                                      onChange={(item: any) =>
+                                        setAnnouncementDate(item)
+                                      }
+                                      date={announcementDate}
+                                    />
+                                  </DatePickerContainer>
+                                </>
+                              )}
+                              {errors.agencyDate && touched.agencyDate ? (
+                                <Error value={errors.agencyDate} />
+                              ) : null}
+                            </DateColumnWrapper>
+                            <DateColumnWrapper>
+                              <DateLabel>
+                                {translate('header.dueDate')}
+                              </DateLabel>
+                              <input
+                                type="text"
+                                name="InputKeyword"
+                                value={
+                                  dueDate !== undefined
+                                    ? `${Moment(dueDate).format('MM-DD-YYYY')}`
+                                    : `-------`
+                                }
+                                readOnly
+                                onClick={() => setOpenDueDate(!openDueDate)}
+                              />
+                              {openDueDate && (
+                                <>
+                                  <OverlayDateRange
+                                    onClick={() => setOpenDueDate(!openDueDate)}
+                                  />
+                                  <DatePickerContainer>
+                                    <Calendar
+                                      onChange={(item: any) => setDueDate(item)}
+                                      date={dueDate}
+                                    />
+                                  </DatePickerContainer>
+                                </>
+                              )}
+                              {errors.agencyDueDate && touched.agencyDueDate ? (
+                                <Error value={errors.agencyDueDate} />
+                              ) : null}
+                            </DateColumnWrapper>
+                          </RowWrapper>
+                        </ContainerDates>
+                      </ContentToggle>
+                    </ToggleItem>
+                  )}
+                  {description && (
+                    <ToggleItem id="item-description">
+                      <TitleToggle>
+                        <p>{translate('header.description')}</p>
+                      </TitleToggle>
+                      <ContentToggle>
+                        <CkEditor
+                          id="comment"
+                          name="comment"
+                          data={editData ? editData.comment : ''}
+                          onChange={(event: any, editor: any) => {
+                            values.comment = editor.getData();
+                          }}
+                        />
+                        <Error value={errors.comment} />
+                      </ContentToggle>
+                    </ToggleItem>
+                  )}
+                  {substances && (
+                    <ToggleItem id="item-substances">
+                      <TitleToggle>
+                        <p>{translate('header.substances')}</p>
+                      </TitleToggle>
+                      <ContentToggle>
+                        <SubstanceSelector
+                          type="checkbox-select"
+                          options={listSubstances}
+                          send="id"
+                          appearence="commonName"
+                          inputRef={chique}
+                          checkboxSelected={editData?.Substances}
+                          selectedValues={(value: any) => {
+                            values.substances = value?.map((a: any) =>
+                              Number(a.id)
+                            );
+                          }}
+                        />
+                      </ContentToggle>
+                    </ToggleItem>
+                  )}
+                  {attachments && (
+                    <>
+                      {[...Array(countFiles)].map((item, i) => (
+                        <ToggleItem id="item-attachments">
+                          <TitleToggle>
+                            <p>{translate('header.attachments')}</p>
+                          </TitleToggle>
+                          <ContentToggle>
+                            {showFileUploadRef.current[i] && (
+                              <AttachmentsWrapperContainer>
+                                <AttachmentsLabel htmlFor="selecao-arquivo">
+                                  Upload File
+                                </AttachmentsLabel>
+                                <AttachmentsButton
+                                  id="selecao-arquivo"
+                                  type="file"
+                                  name="file"
+                                  placeholder="kakakak"
+                                  onChange={(e: any) => onFileChoosed(e, i)}
+                                />
+                              </AttachmentsWrapperContainer>
+                            )}
+                            {!showFileUploadRef.current[i] && (
+                              <AttachmentsWrapperContainer>
+                                <span>{files.current[i]?.[0].name}</span>
+                                <Touchable
+                                  type="button"
+                                  onClick={() => onFileRemove(i)}
+                                >
+                                  <RemoveAttachment src={removeAttachment} />
+                                </Touchable>
+                              </AttachmentsWrapperContainer>
+                            )}
+                            <AttachmentsInputContainer>
+                              <AttachmentsInput
+                                type="text"
+                                defaultValue={
+                                  attDescription ? attDescription[i] : ''
+                                }
+                                onBlur={e => {
+                                  onAddAttDescription(e, i);
+                                }}
+                                placeholder="Input the description of the attachment here."
+                              />
+                            </AttachmentsInputContainer>
+                            {!showFileUploadRef.current[i] &&
+                              countFiles == i + 1 && (
+                                <AddAttachment>
+                                  <BtnAddAttachment
+                                    onClick={handleAddMoreFiles}
+                                  >
+                                    {translate(
+                                      'components.buttons.addAttachmentButton'
+                                    )}
+                                  </BtnAddAttachment>
+                                </AddAttachment>
+                              )}
+                          </ContentToggle>
+                        </ToggleItem>
+                      ))}
+                    </>
+                  )}
+                  {noStandartButtons ? null : (
+                    <ContainerSave>
+                      <Button
+                        type="submit"
+                        text={translate('components.buttons.saveButton')}
+                      />
+                      <AlternativeButton
+                        onClick={() => {
+                          resetUpdate();
+                          close();
+                        }}
+                        text={translate('components.buttons.cancelButton')}
+                      />
+                    </ContainerSave>
+                  )}
+                </ContainerToggles>
+              </ContainerModalItems>
+            </UpdateModal>
+            <Overlay
+              onClick={() => {
+                resetUpdate();
+                close();
+              }}
+            />
+          </Container>
+        </form>
+      )}
+    </Formik>
+  ) : null;
+};
+
+export default ModalUpdate;

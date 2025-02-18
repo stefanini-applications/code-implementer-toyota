@@ -1,0 +1,17 @@
+# SourceGraph-Batch-Change-Name: tmna-npm-repos-dependabot
+# Date: 2024-12-10 18:56:16
+version: 2
+registries:
+  npm-npmjs:
+    type: npm-registry
+    url: https://artifactory.tmna-devops.com/artifactory/npm-dev/
+    token: ${{secrets.S_READER_BOT_P_ARTIFACTORY_PASSWORD}}
+    replaces-base: true
+updates:
+- package-ecosystem: npm
+  directory: .
+  open-pull-requests-limit: 10
+  schedule:
+    interval: weekly
+  registries:
+  - npm-npmjs

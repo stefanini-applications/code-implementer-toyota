@@ -1,0 +1,35 @@
+async function uploadAttachment(files: any, descriptions: any) {
+  const result: any[] = [];
+  await Promise.all(
+    // eslint-disable-next-line consistent-return
+    files.map(async (element: any, index: any) => {
+      const fileExtensionIncludesExe = element[index]?.name.includes('.exe');
+      if (fileExtensionIncludesExe) {
+        ToastError('Attachment extension invalid (.exe)');
+        return null;
+      }
+      if (!element[0].uploaded) {
+        const formData = new FormData();
+        formData.append('file', element[0]);
+        const upResult = await api.post(`/attachment`, formData, {
+          headers: {
+            enctype: 'multipart/form-data'
+          }
+        });
+        result.push({
+          fileUuid: upResult.data.message.fileUuid,
+          fileName: upResult.data.message.fileName,
+          description: descriptions[index] ?? ''
+        });
+      } else {
+        result.push({
+          id: Number(element[0].id),
+          fileUuid: element[0].uuid,
+          fileName: element[0].name,
+          description: descriptions[index] ?? ''
+        });
+      }
+    })
+  );
+  return result;
+}

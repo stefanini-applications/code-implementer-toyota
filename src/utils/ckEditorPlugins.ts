@@ -1,0 +1,23 @@
+export default [
+  'Essentials',
+  'CKFinderUploadAdapter',
+  'Autoformat',
+  'Bold',
+  'Italic',
+  'BlockQuote',
+  'CKFinder',
+  'CloudServices',
+  'EasyImage',
+  'Heading',
+  'Image',
+  'ImageCaption',
+  'ImageStyle',
+  'ImageToolbar',
+  'ImageUpload',
+  'Indent',
+  'Link',
+  'List',
+  'MediaEmbed',
+  'Table',
+  'TableToolbar'
+];
